@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>農曆出生時間轉換器</title>
+    <title>六十四卦轉換</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary-brown: #795548;
             --accent-red: #ff5252;
             --bg-grey: #f5f5f5;
             --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
@@ -66,7 +71,6 @@
             font-size: 18px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            box-sizing: border-box;
             font-family: inherit;
         }
 
@@ -94,17 +98,17 @@
         }
 
         .stem-branch {
-            font-size: 48px;
+            font-size: 20px;
             font-weight: bold;
             color: var(--primary-brown);
-            letter-spacing: 4px;
-            margin: 10px 0;
+            margin: 5px 0;
         }
 
         .branch-time {
-            font-size: 28px;
-            font-weight: 500;
-            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-brown);
+            margin: 5px 0;
         }
 
         /* 年份換算工具樣式 */
@@ -150,21 +154,21 @@
         /* 六爻顯示區域強化 */
         .hexagram-container {
             background: #fffdfb;
-            padding: 20px 10px;
             border-radius: 12px;
             border: 1px dashed var(--primary-brown);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-width: 400px;
-            padding: 30px;
+            width: 100%;
+            padding: 20px 15px;
         }
 
         .lunar-detail {
             font-size: 20px;
+            font-weight: bold;
             color: var(--primary-brown);
-            margin-top: 5px;
+            margin: 5px 0;
         }
 
         .hexagram-name {
@@ -172,6 +176,52 @@
             font-weight: bold;
             color: var(--accent-red);
             margin-top: 15px;
+        }
+
+        /* 意義說明區塊樣式 */
+        .detail-toggle-btn {
+            margin-top: 20px;
+            padding: 8px 16px;
+            background-color: transparent;
+            color: var(--primary-brown);
+            border: 1px solid var(--primary-brown);
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .detail-toggle-btn:hover {
+            background-color: var(--primary-brown);
+            color: white;
+        }
+        .meaning-box {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin-top: 0;
+            padding: 0 15px;
+            background-color: #fdfaf8;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+            border: 0 solid #eee;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .meaning-box.open {
+            max-height: 500px; /* 設為足夠容納內容的高度 */
+            opacity: 1;
+            margin-top: 15px;
+            padding: 15px;
+            border-width: 1px;
+        }
+        .meaning-item {
+            margin-bottom: 8px;
+        }
+        .meaning-item strong {
+            color: var(--primary-brown);
+            margin-right: 5px;
         }
 
         /* 六爻顯示區域佈局 */
@@ -188,7 +238,7 @@
             align-items: center;
             justify-content: center;
             gap: 15px;
-            animation: yaoFadeIn 0.5s ease-out forwards;
+            animation: yaoFadeIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
             opacity: 0;
         }
 
@@ -207,6 +257,8 @@
             width: 200px;
             display: flex;
             justify-content: space-between;
+            transform-origin: center;
+            animation: barExpand 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
         .yao-bar.yang {
@@ -222,12 +274,19 @@
         @keyframes yaoFadeIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(30px) scale(0.9);
+                filter: blur(10px);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
+                filter: blur(0);
             }
+        }
+
+        @keyframes barExpand {
+            from { transform: scaleX(0); opacity: 0; }
+            to { transform: scaleX(1); opacity: 1; }
         }
 
         /* 文字資訊樣式（加大） */
@@ -248,12 +307,99 @@
         .elem-水 { color: #1976d2; }
 
         /* 逐爻延遲動畫 */
-        .yao-line-wrapper:nth-child(1) { animation-delay: 0.1s; }
-        .yao-line-wrapper:nth-child(2) { animation-delay: 0.2s; }
-        .yao-line-wrapper:nth-child(3) { animation-delay: 0.3s; }
-        .yao-line-wrapper:nth-child(4) { animation-delay: 0.4s; }
-        .yao-line-wrapper:nth-child(5) { animation-delay: 0.5s; }
-        .yao-line-wrapper:nth-child(6) { animation-delay: 0.6s; }
+        /* 增加延遲間隔，讓進場更有序且富有層次（由初爻至六爻） */
+        .yao-line-wrapper:nth-child(1), .yao-line-wrapper:nth-child(1) .yao-bar { animation-delay: 0.2s; }
+        .yao-line-wrapper:nth-child(2), .yao-line-wrapper:nth-child(2) .yao-bar { animation-delay: 0.4s; }
+        .yao-line-wrapper:nth-child(3), .yao-line-wrapper:nth-child(3) .yao-bar { animation-delay: 0.6s; }
+        .yao-line-wrapper:nth-child(4), .yao-line-wrapper:nth-child(4) .yao-bar { animation-delay: 0.8s; }
+        .yao-line-wrapper:nth-child(5), .yao-line-wrapper:nth-child(5) .yao-bar { animation-delay: 1.0s; }
+        .yao-line-wrapper:nth-child(6), .yao-line-wrapper:nth-child(6) .yao-bar { animation-delay: 1.2s; }
+
+        /* RWD 響應式調整 */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                border-radius: 12px;
+            }
+            .stem-branch {
+                font-size: 32px !important;
+            }
+            .branch-time {
+                font-size: 22px;
+            }
+            .yao-bar {
+                width: 140px;
+                height: 14px;
+            }
+            .yao-text {
+                font-size: 18px;
+                min-width: 100px;
+            }
+        }
+
+        /* 深色模式支援 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-grey: #121212;
+                --card-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            }
+            body {
+                color: #e0e0e0;
+            }
+            .container {
+                background: #1e1e1e;
+            }
+            header {
+                background-color: #3e2723;
+                border-bottom-color: var(--primary-brown);
+            }
+            header h1, .stem-branch, .lunar-detail, label, .converter-section label {
+                color: #d7ccc8;
+            }
+            .input-section, .divider {
+                border-bottom-color: #333;
+            }
+            .converter-section {
+                background-color: #262626;
+                border-bottom-color: #333;
+            }
+            input {
+                background-color: #2c2c2c;
+                border-color: #444;
+                color: #fff;
+            }
+            #resultGregOutput {
+                background-color: #1a1a1a !important;
+            }
+            .divider::after {
+                background: #1e1e1e;
+                color: #d7ccc8;
+            }
+            .hexagram-container {
+                background: #252525;
+                border-color: #5d4037;
+            }
+            .yao-bar.yang, .yao-bar.yin .segment {
+                background-color: #e0e0e0;
+            }
+            .branch-time {
+                color: #fff;
+            }
+            .meaning-box {
+                background-color: #262626;
+                border-color: #333;
+                color: #ccc;
+            }
+            .meaning-item strong {
+                color: #d7ccc8;
+            }
+            .detail-toggle-btn {
+                color: #d7ccc8;
+                border-color: #d7ccc8;
+            }
+        }
 
         footer {
             padding: 20px;
@@ -267,7 +413,7 @@
 
 <div class="container">
     <header>
-        <h1>農曆出生轉換器</h1>
+        <h1>六十四卦轉換</h1>
     </header>
 
     <!-- 民國轉西元換算工具 -->
@@ -295,15 +441,32 @@
     <div class="result-section">
         <div class="divider"></div>
         
-        <div id="stemBranchYear" class="stem-branch" style="font-size: 36px;">--</div>
+        <div id="stemBranchYear" class="stem-branch">--</div>
         <div id="lunarDateDisplay" class="lunar-detail">--</div>
+        <div id="dayPillarDisplay" class="lunar-detail" style="color: var(--accent-red);"></div>
         <div id="branchTime" class="branch-time">出生時辰：--時</div>
-        <div id="dayPillarDisplay" class="lunar-detail" style="font-weight: bold; color: var(--accent-red); margin-bottom: 10px;"></div>
+
+        <div id="movingYaoDisplay" class="lunar-detail" style="color: var(--accent-red); font-weight: bold;"></div>
 
         <div class="hexagram-container">
             <div id="yaoDisplay" class="yao-display"></div>
-            <div id="hexagramSymbolSmall" class="hexagram-symbol-small"></div>
             <div id="hexagramName" class="hexagram-name">計算中</div>
+            
+            <button id="toggleMeaningBtn" class="detail-toggle-btn">查看六親意義說明</button>
+            
+            <div id="meaningBox" class="meaning-box">
+                <div class="meaning-item"><strong>● 父母：</strong>代表長輩、老師、合約、學業、房屋、車輛、保護神、文書印章。</div>
+                <div class="meaning-item"><strong>● 兄弟：</strong>代表平輩、朋友、同事、競爭者、損財、阻力、劫財。</div>
+                <div class="meaning-item"><strong>● 子孫：</strong>代表福德、醫藥、快樂、晚輩、部屬、化解憂愁、財富之源。</div>
+                <div class="meaning-item"><strong>● 妻財：</strong>代表金錢、財產、物慾、薪水、勞動成果、妻子、女性朋友。</div>
+                <div class="meaning-item"><strong>● 官鬼：</strong>代表職位、權力、壓力、官非、病痛、憂慮、丈夫、男性朋友。</div>
+            </div>
+        </div>
+
+        <!-- 分享按鈕區域，標註 html2canvas 忽略此區域不進入截圖 -->
+        <div class="share-actions" data-html2canvas-ignore>
+            <button id="copyTextBtn" class="detail-toggle-btn">複製文字</button>
+            <button id="saveImgBtn" class="detail-toggle-btn">儲存圖片</button>
         </div>
     </div>
 
@@ -333,17 +496,6 @@
     ['天山遯', '澤山咸', '火山旅', '雷山小過', '風山漸', '水山蹇', '艮為山', '地山謙'],
     // [7] 上卦為地 (坤土...)
     ['天地否', '澤地萃', '火地晉', '雷地豫', '風地觀', '水地比', '山地剝', '坤為地']
-    ];
-
-    const hexagramSymbols = [
-        ['䷀', '䷉', '䷌', '䷘', '䷫', '䷅', '䷠', '䷊'],
-        ['䷪', '䷹', '䷰', '䷐', '䷛', '䷮', '䷞', '䷒'],
-        ['䷍', '䷥', '䷝', '䷔', '䷱', '䷿', '䷷', '䷣'],
-        ['䷡', '䷵', '䷶', '䷲', '䷟', '䷧', '䷽', '䷗'],
-        ['䷈', '䷼', '䷤', '䷩', '䷸', '䷺', '䷴', '䷭'],
-        ['䷄', '䷻', '䷾', '䷂', '䷯', '䷜', '䷦', '䷆'],
-        ['䷙', '䷨', '䷕', '䷚', '䷑', '䷃', '䷳', '䷎'],
-        ['䷊', '䷒', '䷣', '䷗', '䷭', '䷆', '䷎', '䷁']
     ];
 
     // 64 卦對應之八宮與世爻位置 (p:宮位, s:世爻位置)
@@ -407,6 +559,61 @@
     const timeInput = document.getElementById('timePicker');
     const yaoDisplay = document.getElementById('yaoDisplay');
     
+    // 意義說明切換邏輯
+    const toggleBtn = document.getElementById('toggleMeaningBtn');
+    const meaningBox = document.getElementById('meaningBox');
+    toggleBtn.addEventListener('click', () => {
+        const isOpen = meaningBox.classList.toggle('open');
+        toggleBtn.innerText = isOpen ? '隱藏意義說明' : '查看六親意義說明';
+    });
+
+    // 分享與截圖邏輯
+    document.getElementById('copyTextBtn').addEventListener('click', () => {
+        const text = [
+            "【六爻排盤結果】",
+            document.getElementById('stemBranchYear').innerText,
+            document.getElementById('lunarDateDisplay').innerText,
+            document.getElementById('dayPillarDisplay').innerText,
+            document.getElementById('branchTime').innerText,
+            document.getElementById('movingYaoDisplay').innerText,
+            "卦象：" + document.getElementById('hexagramName').innerText
+        ].join('\n');
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert('✅ 已複製文字結果至剪貼簿');
+        }).catch(err => {
+            alert('複製失敗，請手動選取文字');
+        });
+    });
+
+    document.getElementById('saveImgBtn').addEventListener('click', () => {
+        const target = document.querySelector('.result-section');
+        html2canvas(target, {
+            backgroundColor: getComputedStyle(document.body).backgroundColor,
+            scale: 2, // 提升圖片清晰度
+            logging: false,
+            onclone: (clonedDoc) => {
+                // 強制顯示正在執行動畫的元素，避免 html2canvas 抓取到初始的透明或位移狀態
+                clonedDoc.querySelectorAll('.yao-line-wrapper').forEach(el => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'none';
+                    el.style.animation = 'none';
+                    el.style.filter = 'none';
+                });
+                clonedDoc.querySelectorAll('.yao-bar').forEach(el => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'none';
+                    el.style.animation = 'none';
+                });
+            }
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `卦象排盤_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    });
+
     dateInput.value = now.toISOString().split('T')[0];
     timeInput.value = now.toTimeString().slice(0, 5);
 
@@ -493,13 +700,27 @@
         const l = (lunarMonth - 1) % 8; 
         const u = (lunarDay - 1) % 8;
 
-        // 更新卦名與符號
+        // 4. 計算動爻 (年+月+日+時) % 6
+        const yearVal = (yearIndex % 12) + 1; // 子=1, 丑=2...
+        const movingYao = (yearVal + lunarMonth + lunarDay + (branchIndex + 1)) % 6 || 6;
+        document.getElementById('movingYaoDisplay').innerText = `動爻：第 ${movingYao} 爻`;
+
+        // 5. 計算變卦
+        const originalLines = [...trigramLinesMap[l], ...trigramLinesMap[u]];
+        const changedLines = [...originalLines];
+        changedLines[movingYao - 1] = changedLines[movingYao - 1] === 1 ? 0 : 1;
+
+        const findTrigramIdx = (bits) => trigramLinesMap.findIndex(m => m.every((v, i) => v === bits[i]));
+        const l2 = findTrigramIdx(changedLines.slice(0, 3));
+        const u2 = findTrigramIdx(changedLines.slice(3, 6));
+
+        // 更新本卦與變卦顯示
         if (hexagramNames[l] && hexagramNames[l][u]) {
-            document.getElementById('hexagramName').innerText = hexagramNames[l][u];
-            document.getElementById('hexagramSymbolSmall').innerText = hexagramSymbols[l][u];
+            const originalName = hexagramNames[l][u];
+            const changedName = hexagramNames[l2][u2];
+            document.getElementById('hexagramName').innerHTML = `${originalName} <span style="color: #666; font-size: 20px;">➔ 變 ${changedName}</span>`;
         } else {
-            document.getElementById('hexagramName').innerText = "查無此卦";
-            document.getElementById('hexagramSymbolSmall').innerText = "";
+            document.getElementById('hexagramName').innerHTML = "查無此卦";
         }
 
 
@@ -518,11 +739,13 @@
         const allBranches = [...lowerBranches, ...upperBranches];
         const allStems = [...lowerStems, ...lowerStems, ...lowerStems, ...upperStems, ...upperStems, ...upperStems]; // 簡化處理
         
-        lines.forEach((isYang, i) => {
+        originalLines.forEach((isYang, i) => {
             const pos = i + 1;
             const branch = allBranches[i];
             const isVoid = voidBranches.includes(branch);
+            const isMoving = (pos === movingYao);
             const voidMark = isVoid ? '<span style="color: var(--accent-red); font-size: 14px; margin-left: 4px;">(空)</span>' : '';
+            const movingMark = isMoving ? '<span style="color: var(--accent-red); margin-left: 8px;">●</span>' : '';
             const stem = (i < 3) ? trigramNaJia[l].s[0] : trigramNaJia[u].s[1];
             const branchElem = branchElements[branch];
             const relation = getLiuQin(palaceElem, branchElem);
@@ -544,7 +767,7 @@
             // 3. 右側：整合資訊與五行顏色
             const textBox = document.createElement('div');
             textBox.className = `yao-text elem-${branchElem}`;
-            textBox.innerHTML = `${relation}${branch}${branchElem}${voidMark}`;
+            textBox.innerHTML = `${relation}${branch}${branchElem}${voidMark}${movingMark}`;
             
             wrapper.append(markBox, bar, textBox);
             yaoDisplay.appendChild(wrapper);
